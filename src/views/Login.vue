@@ -6,7 +6,6 @@
         <p style="text-align: center; color: #909399; margin: 8px 0 0; font-size: 14px">{{ isLoginMode ? '请登录' : '注册新账号' }}</p>
       </template>
 
-      <!-- 简单表单，不用 el-form 验证 -->
       <div style="margin-bottom: 16px">
         <label style="display: block; margin-bottom: 4px; font-size: 14px">邮箱</label>
         <el-input
@@ -29,12 +28,10 @@
         />
       </div>
 
-      <!-- 错误提示 -->
       <div v-if="errorMsg" style="margin-bottom: 12px; padding: 8px 12px; background: #fef0f0; border-radius: 4px; color: #f56c6c; font-size: 13px">
         {{ errorMsg }}
       </div>
 
-      <!-- 成功提示 -->
       <div v-if="successMsg" style="margin-bottom: 12px; padding: 8px 12px; background: #f0f9eb; border-radius: 4px; color: #67c23a; font-size: 13px">
         {{ successMsg }}
       </div>
@@ -61,10 +58,9 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 
-// 直接 import，不依赖动态环境变量
 import { createClient } from '@supabase/supabase-js'
 
 const SUPABASE_URL = 'https://wlpvbuttucrozooilfoj.supabase.co'
@@ -72,7 +68,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const router = useRouter()
-const route = useRoute()
 
 const email = ref('')
 const password = ref('')
@@ -88,11 +83,9 @@ const toggleMode = () => {
 }
 
 const submit = async () => {
-  // 清除之前的消息
   errorMsg.value = ''
   successMsg.value = ''
 
-  // 基础校验
   if (!email.value) {
     errorMsg.value = '请填写邮箱地址'
     return
@@ -101,7 +94,6 @@ const submit = async () => {
     errorMsg.value = '密码至少需要6位字符'
     return
   }
-  // 简单邮箱格式检查
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   if (!emailRegex.test(email.value)) {
     errorMsg.value = '邮箱格式不正确'
@@ -113,7 +105,6 @@ const submit = async () => {
   try {
     if (isLoginMode.value) {
       // 登录
-      console.log('[登录] 尝试登录:', email.value)
       const { data, error } = await supabase.auth.signInWithPassword({
         email: email.value,
         password: password.value
@@ -123,26 +114,34 @@ const submit = async () => {
       ElMessage.success('登录成功！')
       router.push('/orders')
     } else {
-      // 注册
-      console.log('[注册] 尝试注册:', email.value)
-      const { data, error } = await supabase.auth.signUp({
-        email: email.value,
-        password: password.value,
-        options: { emailRedirectTo: window.location.origin }
+      // 注册 - 调用服务端接口（完全不发邮件）
+      const res = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.value, password: password.value })
       })
-      if (error) throw error
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '注册失败')
 
-      if (data.user && !data.session) {
-        successMsg.value = '✅ 注册成功！请查看邮件确认后登录。开发模式下可直接点「去登录」按钮。'
-        isLoginMode.value = true
-      } else if (data.session) {
-        localStorage.setItem('sb-session', JSON.stringify(data.session))
-        ElMessage.success('注册并自动登录成功！')
+      // 注册成功，自动登录
+      if (result.session) {
+        localStorage.setItem('sb-session', JSON.stringify(result.session))
+        ElMessage.success('注册成功！')
+        router.push('/orders')
+      } else {
+        successMsg.value = '✅ 注册成功！正在自动登录...'
+        // 注册成功但没有直接返回 session，手动登录一次
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+          email: email.value,
+          password: password.value
+        })
+        if (loginError) throw loginError
+        localStorage.setItem('sb-session', JSON.stringify(loginData.session))
+        ElMessage.success('注册并登录成功！')
         router.push('/orders')
       }
     }
   } catch (e) {
-    console.error('[错误]', e)
     errorMsg.value = e.message || '操作失败，请稍后再试'
   } finally {
     loading.value = false
