@@ -47,9 +47,9 @@ const toggleMode = () => { isLoginMode.value = !isLoginMode.value; errorMsg.valu
 
 const submit = async () => {
   errorMsg.value = ''; successMsg.value = ''
-  if (!email.value) { errorMsg.value = '请填写邮箱'; return }
+  email.value = (email.value || '').trim()
   if (!password.value || password.value.length < 6) { errorMsg.value = '密码至少6位'; return }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) { errorMsg.value = '邮箱格式不正确'; return }
+  if (!email.value || !email.value.includes('@') || !email.value.includes('.')) { errorMsg.value = '邮箱格式不正确'; return }
 
   loading.value = true
   try {
