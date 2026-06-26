@@ -1,0 +1,16 @@
+{
+  "name": "order-system-backend",
+  "version": "1.0.0",
+  "description": "订单管理系统 - 后端 API",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "@supabase/supabase-js": "^2.49.0",
+    "jsonwebtoken": "^9.0.2"
+  }
+}

@@ -29,10 +29,11 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { createClient } from '@supabase/supabase-js'
+import apiHelper from '../lib/api'
 
-const URL = 'https://wlpvbuttucrozooilfoj.supabase.co'
-const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscHZidXR0dWNyb3pvb2lsZm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzODAzNTEsImV4cCI6MjA5Nzk1NjM1MX0.-4P6rnlbO3ZrgNZcwvWl5KKcBC0ICE0lKhcTdEMhh9Y'
-const supabase = createClient(URL, ANON)
+const SUPABASE_URL = 'https://wlpvbuttucrozooilfoj.supabase.co'
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndscHZidXR0dWNyb3pvb2lsZm9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIzODAzNTEsImV4cCI6MjA5Nzk1NjM1MX0.-4P6rnlbO3ZrgNZcwvWl5KKcBC0ICE0lKhcTdEMhh9Y'
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 const router = useRouter()
 const email = ref('')
@@ -53,24 +54,31 @@ const submit = async () => {
   loading.value = true
   try {
     if (isLoginMode.value) {
+      // 登录 - 直接调 Supabase
       const { data, error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
       if (error) throw new Error(error.message)
       localStorage.setItem('sb-session', JSON.stringify(data.session))
       ElMessage.success('登录成功！')
       router.push('/orders')
     } else {
-      // 注册：先 signUp（可能会触发邮件），直接接着登录
-      const { error: signUpErr } = await supabase.auth.signUp({ email: email.value, password: password.value })
-      if (signUpErr) throw new Error(signUpErr.message)
+      // 注册 - 调后端 API（不触发邮件）
+      const result = await apiHelper.api('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.value, password: password.value })
+      })
 
-      // 立即登录（邮件确认已关，应该直接能登入）
-      const { data, error: loginErr } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value })
-      if (loginErr) {
-        successMsg.value = '注册成功，请直接点「去登录」登录'
-        isLoginMode.value = true
-      } else {
-        localStorage.setItem('sb-session', JSON.stringify(data.session))
+      if (result.session) {
+        localStorage.setItem('sb-session', JSON.stringify(result.session))
         ElMessage.success('注册成功！')
+        router.push('/orders')
+      } else {
+        // 注册成功但没自动登录，直接登录一次
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+          email: email.value, password: password.value
+        })
+        if (loginError) throw new Error(loginError.message)
+        localStorage.setItem('sb-session', JSON.stringify(loginData.session))
+        ElMessage.success('注册并登录成功！')
         router.push('/orders')
       }
     }
