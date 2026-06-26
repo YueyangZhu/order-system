@@ -18,7 +18,7 @@
 
       <div style="text-align:center;margin-top:16px;font-size:14px">
         <span style="color:#606266">{{ isLoginMode ? '没有账号？' : '已有账号？' }}</span>
-        <el-button type="text" @click="toggleMode" style="color:#409EFF;padding:0;font-size:14px">{{ isLoginMode ? '去注册' : '去登录' }}</el-button>
+        <el-button link type="primary" @click="toggleMode" style="padding:0;font-size:14px">{{ isLoginMode ? '去注册' : '去登录' }}</el-button>
       </div>
     </el-card>
   </div>

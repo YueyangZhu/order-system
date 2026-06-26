@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3001
 
 // 中间件
 app.use(cors({
-  origin: ['https://order-system-xi-ten.vercel.app', 'http://localhost:5173', 'http://localhost:4173'],
+  origin: ['https://order-system-xi-ten.vercel.app', 'https://order-system-frontend-7i8k.onrender.com', 'http://localhost:5173', 'http://localhost:4173'],
   credentials: true
 }))
 app.use(express.json())
