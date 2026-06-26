@@ -9,7 +9,7 @@ router.use(requireAuth)
 // 获取订单列表
 router.get('/', async (req, res) => {
   try {
-    const { data, error } = await anonClient
+    const { data, error } = await adminClient
       .from('orders')
       .select('*')
       .eq('user_id', req.userId)
